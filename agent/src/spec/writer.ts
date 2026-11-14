@@ -5,6 +5,7 @@ import { toMarkdown } from "./markdown.ts";
 import { parseSpec, submitSpecTool } from "./schema.ts";
 
 const MODEL = process.argv[3] ?? "claude-sonnet-5-5";
+const CACHE = process.argv.includes("--cache");
 
 const issueNumber = Number(process.argv[2]);
 
@@ -27,15 +28,25 @@ const response = await createMessage(
     messages: [
       {
         role: "user",
-        content:
-          `<project_readme>\n${readme}\n</project_readme>\n\n` +
-          `<project_claude_md>\n${claudeMd}\n</project_claude_md>\n\n` +
-          `<issue number="${issue.number}">\nTitle: ${issue.title}\n` +
-          `Labels: ${issue.labels.join(", ")}\n\n${issue.body}\n</issue>`,
+        content: [
+          {
+            type: "text",
+            text:
+              `<project_readme>\n${readme}\n</project_readme>\n\n` +
+              `<project_claude_md>\n${claudeMd}\n</project_claude_md>`,
+            ...(CACHE && { cache_control: { type: "ephemeral" } }), // cache everything up to here
+          },
+          {
+            type: "text",
+            text:
+              `<issue number="${issue.number}">\nTitle: ${issue.title}\n` +
+              `Labels: ${issue.labels.join(", ")}\n\n${issue.body}\n</issue>`,
+          },
+        ],
       },
     ],
   },
-  { task: "spec", issue: issueNumber },
+  { task: CACHE ? "spec:cached" : "spec", issue: issueNumber },
 );
 
 if (response.stop_reason === "max_tokens")

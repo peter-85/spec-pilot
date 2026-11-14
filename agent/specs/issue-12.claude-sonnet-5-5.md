@@ -2,34 +2,36 @@
 
 ## Goal
 
-Let users optionally set a due date when creating a todo, and visually highlight overdue todos (past due and not completed) in the frontend list. Existing todos without a due date must continue to work unchanged.
+Let users optionally set a due date when creating a todo, and visually highlight overdue todos (past due and not completed) in the frontend list. Existing todos without a due date must keep working unchanged.
 
 ## Requirements
 
-- Add a nullable `dueDate` field to the `Todo` model in `src/prisma/contract.prisma`, using a timestamp type (see open questions on date vs. datetime). It must have no default and must not be required, so existing rows remain valid with `dueDate = null`.
-- Regenerate `src/prisma/contract.json` and `src/prisma/contract.d.ts` with `npm run contract:emit` and commit them together with the schema change. Include any `migrations/` snapshot or ref files the Prisma CLI produces.
-- `POST /todos` accepts an optional `dueDate` in the body alongside `task`. When provided and valid, it is stored on the new todo. When omitted, `null`, or an empty string, the todo is created with `dueDate = null`.
-- `POST /todos` validates `dueDate` when provided and non-empty: it must be a string that parses to a valid date (ISO 8601). An invalid value returns `400` with an error message, and no todo is created. Existing validation and behavior for `task` is unchanged. Success status stays `200`.
-- `GET /todos` returns `dueDate` for each todo, as an ISO 8601 string or `null`. Todos without a due date return `dueDate: null` and are otherwise unchanged.
-- The `POST /todos` response returns the full created row, including `dueDate`.
-- The todo create path must keep the `userId: req.userId` scoping. No new route is added, and `PUT /todos/:id` and `DELETE /todos/:id` behavior is unchanged.
-- Do not add support for editing or removing a due date after creation. `PUT /todos/:id` must not read or write `dueDate`.
-- Frontend (`public/index.html`): the create-todo form gets an optional date input next to the task input. On submit, it sends `dueDate` in the POST body only if a date was chosen. It clears the date input after a successful create.
-- Frontend: each todo with a due date shows that date in a readable, locale-appropriate format. Todos with `dueDate = null` render exactly as they do today, with no due-date text.
-- Frontend: a todo is overdue when `dueDate` is non-null, the due date is before the current time (or before the start of today, per the open question), and `completed` is falsy. Overdue todos get a distinct CSS class (e.g. `overdue`) with visible styling, such as a red color or border, defined in `public/styles.css`. Completed todos, todos with no due date, and todos not yet due do not get the class.
-- Overdue status is computed on the client from `dueDate` and `completed`. It is not stored in the database and not returned by the API. Toggling `completed` in the UI updates the overdue styling to match.
+- Add a nullable due-date field (e.g. `dueDate`, timestamp/date type) to the `Todo` model in `src/prisma/contract.prisma`. It must be optional so existing rows remain valid with NULL and no backfill is needed.
+- Run `npm run contract:emit` and commit the regenerated `src/prisma/contract.json` and `src/prisma/contract.d.ts` together with the schema change; include any new `migrations/` snapshot/ref the Prisma CLI produces.
+- `POST /todos` accepts an optional `dueDate` in the body alongside `task`. When omitted, null or empty string, the todo is created with a null due date, and behaviour is identical to today.
+- `POST /todos` with a `dueDate` that is not a valid date returns `400` and creates nothing. The response should have a clear error message. Accepted format: ISO 8601 date string (`YYYY-MM-DD`) or full ISO datetime.
+- The todo is still created with `userId: req.userId`; the user scoping invariant is unchanged.
+- `GET /todos` returns `dueDate` on each todo (null for todos without one). Completed state and existing fields are unchanged.
+- `POST /todos` response returns the created todo including `dueDate`.
+- The todo creation form in `public/index.html` has an optional date input next to the task input. Submitting with the date left empty creates a todo with no due date.
+- The frontend sends the chosen date as `dueDate` in the `POST /todos` request and clears the date input after a successful creation.
+- The frontend displays the due date on todos that have one. Todos with no due date show no due-date text and render as before.
+- A todo is overdue if and only if it has a due date earlier than today, and `completed` is false. Overdue todos get a distinct visual style (e.g. a CSS class `overdue` with red text/border defined in `public/styles.css`). Completed todos with a past due date, todos due today or in the future, and todos without a due date must not be styled as overdue.
+- Overdue status is computed on the client at render time from `dueDate`, `completed` and the current date. Toggling completion re-renders so the overdue style is added or removed accordingly. No `overdue` column is stored.
+- `PUT /todos/:id` and `DELETE /todos/:id` behave as before; they do not accept or change `dueDate`.
 
 ## Acceptance criteria
 
-- After `npm run contract:emit`, `contract.json` and `contract.d.ts` contain a nullable `dueDate` on `Todo`. After `npx prisma db update`, existing rows have `dueDate` NULL and the app starts without errors.
-- `POST /todos` with `{ task: "a", dueDate: "2030-01-01" }` returns 200 and a body whose `dueDate` represents 2030-01-01. A later `GET /todos` returns the same value.
-- `POST /todos` with `{ task: "a" }`, with `dueDate: null`, or with `dueDate: ""` returns 200 with `dueDate: null`.
-- `POST /todos` with `{ task: "a", dueDate: "not-a-date" }` returns 400, and `GET /todos` shows no new todo.
-- `GET /todos` for a user with pre-existing todos returns them all with `dueDate: null` and the other fields unchanged.
-- A user cannot see another user's todos or due dates. Existing `userId` scoping is intact.
-- In the browser, a todo with a past `dueDate` and `completed = false` has the overdue class and the overdue style. Checking it as completed removes the class. A todo with a future or null due date never has the class.
-- The create form works with the date left blank, and the new todo appears with no due-date text and no overdue styling.
-- `PUT /todos/:id` and `DELETE /todos/:id` behave as before, including 404 for another user's todo.
+- `POST /todos` with `{ task: "a" }` returns 200 and the todo has `dueDate: null`.
+- `POST /todos` with `{ task: "a", dueDate: "2030-01-15" }` returns 200 and the todo's `dueDate` corresponds to 2030-01-15.
+- `POST /todos` with `{ task: "a", dueDate: "not-a-date" }` returns 400 and no todo row is added.
+- `GET /todos` includes a `dueDate` key on every todo, and returns null for rows created before the migration.
+- A user cannot see or receive another user's todos or due dates via `GET /todos`.
+- In the UI, a todo with a due date in the past and `completed = false` has the overdue style; marking it complete removes the style.
+- In the UI, todos due today, due in the future, or without a due date are not styled overdue.
+- The schema change applies cleanly with `npx prisma db update` against a database containing existing todos, without data loss.
+- `contract.json` and `contract.d.ts` reflect the new field and are consistent with `contract.prisma`.
+- `PUT` and `DELETE` on `/todos/:id` still return 200 for own todos and 404 for others'.
 
 ## Files likely affected
 
@@ -41,22 +43,20 @@ Let users optionally set a due date when creating a todo, and visually highlight
 - public/index.html
 - public/styles.css
 - README.md
-- CLAUDE.md
 
 ## Out of scope
 
-- Editing or clearing a due date after creation, including any change to `PUT /todos/:id`.
-- Sorting or filtering todos by due date or overdue status.
-- Server-side `overdue` flag or query filters.
-- Notifications, reminders, or emails.
-- Time-of-day or timezone preferences per user.
-- Recurring todos.
-- Adding a test framework. The project has none.
+- Editing or clearing a due date after creation (explicitly excluded by the issue).
+- Filtering, sorting or grouping todos by due date.
+- Reminders, notifications or emails for overdue items.
+- Server-side computed or stored overdue flag.
+- Due-time/time-zone handling beyond a date-level comparison.
+- Adding a test framework or linter.
 - Changes to auth routes or middleware.
 
 ## Open questions
 
-- Date only or date and time? The issue says "pick a due date", which suggests date only (`<input type="date">`). I assumed a date-only input stored in a timestamp column. Please confirm. This also decides whether a todo due today counts as overdue after midnight or only after the date has fully passed. Recommended: a todo is overdue only once its due date is before today's local date.
-- Timezone handling: should a date-only value be stored as UTC midnight and compared against the browser's local date? Recommended: store as `YYYY-MM-DD` at UTC midnight, and compare by calendar date in the client's local time.
-- Should past dates be allowed at creation? The spec allows them, so the todo is immediately overdue. Confirm this is acceptable or whether the server should reject them.
-- What is the exact Prisma 8 contract type for a nullable timestamp or date column (e.g. `DateTime?`)? Check `prisma-8.md`. The implementer should also confirm how `db.orm` serializes it, either `Date` or string, so the API returns ISO strings.
+- Should the due date be date-only or date and time? The issue says 'pick a due date', so this spec assumes date-only in the UI; the DB column type (date vs timestamp) needs confirming.
+- Should past due dates be rejected at creation time? The spec assumes they are allowed (they are just immediately overdue).
+- Which time zone defines 'today' for overdue? The spec assumes the browser's local date, with a todo overdue only from the day after its due date.
+- Is the exact visual treatment (colour, badge, icon) specified anywhere? The spec assumes a simple red style via an `overdue` CSS class.

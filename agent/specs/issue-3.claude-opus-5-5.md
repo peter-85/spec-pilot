@@ -2,26 +2,26 @@
 
 ## Goal
 
-Make `POST /auth/register` return `409 Conflict` with `{ "message": "Username already taken" }` when the username already exists (Prisma 8 `SqlQueryError` with `sqlState === "23505"`). All other errors keep their current response.
+Make `POST /auth/register` return `409 Conflict` with `{ "message": "Username already taken" }` when the username already exists (Postgres unique violation, `sqlState === "23505"`). All other errors keep their current response.
 
 ## Requirements
 
-- 1. In the `catch` block of the `POST /auth/register` handler in `src/routes/authRoutes.js`, if the caught error has `sqlState === "23505"`, respond with HTTP 409 and the JSON body `{ "message": "Username already taken" }`.
-- 2. The 23505 check must work on the error that comes out of `db.transaction(...)`. The user insert happens inside the transaction, so check that the error rethrown after rollback still exposes `sqlState`. If the transaction wraps the error, read the `sqlState` from the wrapped original error (for example `error.cause`) instead.
-- 3. Any other error in the register handler, including `SqlQueryError`s with a different `sqlState` and non-SQL errors, keeps exactly today's response: status 503 with `{ "message": "Internal server error" }`.
-- 4. When a duplicate registration returns 409, no new User row and no default Todo row are created. The transaction must roll back fully.
-- 5. The successful registration path does not change: it still returns 201 with a JWT and creates the user plus the default first todo in one transaction.
-- 6. `POST /auth/login` behavior does not change.
-- 7. Add a `409` note for duplicate usernames to the `/auth/register` row (or the notes below the table) in the API section of README.md.
+- 1. In the `catch` block of the register handler in `src/routes/authRoutes.js`, if the caught error has `sqlState === "23505"`, respond with status 409 and JSON body exactly `{ "message": "Username already taken" }`.
+- 2. Any other error from the register handler keeps the current behaviour: status 503 with `{ "message": "Internal server error" }`. The status code for non-duplicate errors must not change.
+- 3. Detect the duplicate by reading `error.sqlState`, written null-safe (e.g. `error?.sqlState`), so a thrown non-object or an error without `sqlState` cannot crash the handler. Do not match on the Prisma 7 code `P2002` or on error message strings.
+- 4. A failed duplicate registration must not leave a partial write. The existing `db.transaction` must still roll back, so no extra default todo is created for any user and no JWT is returned.
+- 5. A successful registration keeps its current behaviour: status 201, a JWT with an `{ id }` payload and 1h expiry, and one default todo created in the same transaction.
+- 6. Do not change `POST /auth/login`, `authMiddleware.js`, or `todoRoutes.js`.
+- 7. Update the API section of `README.md` so that `POST /auth/register` documents `409` for a username that is already taken. Update the line saying that both auth endpoints return 503 on database failure so it stays accurate.
 
 ## Acceptance criteria
 
-- `POST /auth/register` with `{"username":"alice","password":"x"}` on a fresh database returns 201 with a token.
-- Sending the same request again returns 409 with a body exactly equal to `{"message":"Username already taken"}`.
-- After the duplicate attempt, the database still has exactly one User with username `alice` and only that user's single default Todo; no orphan rows exist.
-- If the DB call fails for a non-unique-violation reason (for example an unreachable `DATABASE_URL`), register still returns 503 `{"message":"Internal server error"}`.
-- Login behavior is the same as before: 200 `{ token }` for valid credentials, 404 for invalid credentials, 503 on DB error.
-- README's API section documents the 409 response for `/auth/register`.
+- With an empty `User` table, `POST /auth/register` with `{"username":"alice","password":"x"}` returns 201 and a token.
+- Sending that same request again returns 409 with body exactly `{"message":"Username already taken"}`.
+- After the duplicate attempt, the `User` table has exactly one row with username `alice`, and that user has exactly one todo (the default todo from the first registration).
+- If the database call fails with an error whose `sqlState` is not 23505, or with an error that has no `sqlState` (e.g. `DATABASE_URL` points to an unreachable DB), the endpoint still returns 503 `{"message":"Internal server error"}`.
+- `POST /auth/login` responses are unchanged: 200 with `{ token }`, 404 for invalid credentials, and 503 for DB errors.
+- README API docs list 409 for a duplicate username on register.
 
 ## Files likely affected
 
@@ -30,16 +30,15 @@ Make `POST /auth/register` return `409 Conflict` with `{ "message": "Username al
 
 ## Out of scope
 
-- Adding a test framework or test suite (the project has none; `npm test` is a placeholder)
-- Checking whether the username exists before inserting (rely on the DB constraint to avoid race conditions)
-- Changing the login endpoint's 404-for-invalid-credentials behavior
-- Input validation for username/password (empty values, length rules, etc.)
-- Changing the error handling of the todo routes
-- Frontend changes to display the new 409 message
+- Adding a test framework or test suite. The repo has none, and `npm test` is a placeholder.
+- Checking whether the username exists before inserting. Relying on the unique constraint avoids race conditions.
+- Changing login's 404-for-invalid-credentials behaviour or other status codes.
+- Input validation for username or password (empty values, length, etc.).
+- Changes to the Prisma contract or migrations.
+- Frontend changes in `public/index.html` beyond what is needed to keep it working.
 
 ## Open questions
 
-- The issue says 'Keep 503/500 for everything else', but the handler currently returns only 503. Should all other errors stay 503 (as this spec assumes), or should non-DB errors (for example a bcrypt or JWT signing failure) become 500?
-- Should the 409 apply to any 23505 error, or only when the violated constraint is the unique index on `User.username` (for example by checking the constraint name on the error)? Right now username is presumably the only unique constraint the register path can hit, so this spec checks `sqlState` alone, as the issue suggests.
-- Does `db.transaction` rethrow the original `SqlQueryError` unchanged, or does it wrap it? Check this against `prisma-8.md` or with a manual test while implementing requirement 2.
-- Since there is no test suite, are manual curl checks enough to verify the acceptance criteria, or should this issue add a minimal automated test anyway?
+- The issue says 'Keep 503/500 for everything else', but the handler currently returns only 503. Should all other errors stay 503 (the spec's assumption), or should non-database errors (e.g. bcrypt or JWT signing failures) be split out as 500?
+- Should the check also confirm `error instanceof SqlQueryError` and/or the violated constraint or column (`User.username`), so an unrelated unique violation (e.g. on the default Todo insert) isn't reported as 'Username already taken'? The spec assumes checking `sqlState` alone is enough, because `username` is the only unique field touched during registration.
+- Should the frontend (`public/index.html`) show the 409 message to the user? It may currently treat any non-2xx response as a generic failure.
