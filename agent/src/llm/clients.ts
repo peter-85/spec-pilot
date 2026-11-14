@@ -54,7 +54,9 @@ export async function createMessage(
   );
 
   console.log(
-    `[${meta.task}] ${params.model}: ${u.input_tokens} in / ${u.output_tokens} out, ` +
+    `[${meta.task}] ${params.model}: ${u.input_tokens} in ` +
+      `(+${u.cache_read_input_tokens ?? 0} cache read, +${u.cache_creation_input_tokens ?? 0} cache write) ` +
+      `/ ${u.output_tokens} out, ` +
       `$${cost.toFixed(5)}, ${duration} ms`,
   );
   return response;
