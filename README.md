@@ -70,11 +70,47 @@ spec-pilot/
 
 ## Results
 
-_Coming soon:_ model quality vs cost, impact of retrieval on spec quality, and cost savings from model routing.
+- **[Model comparison](docs/model-comparison.md)** — Haiku, Sonnet and Opus writing specs for real issues: quality scores, cost, latency, and the effect of prompt caching.
+- **[Cost report](docs/cost-report.md)** — average tokens, time and cost per model and task, generated from the usage log.
+
+_Coming later:_ impact of retrieval on spec quality, and cost savings from model routing.
 
 ## Getting started
 
-_Setup instructions will be added once Phase 1 is complete._
+**Requirements:** Node.js 24+ (runs TypeScript directly, no build step) and pnpm.
+
+```bash
+pnpm install
+cp agent/.env.example agent/.env   # then add ANTHROPIC_API_KEY and GITHUB_TOKEN
+```
+
+**Write a spec** for an issue in the [demo target](#demo-target) repo:
+
+```bash
+pnpm --filter @spec-pilot/agent spec 3                             # Sonnet 5.5 (default)
+pnpm --filter @spec-pilot/agent spec 3 claude-haiku-5-5 --cache    # another model, with prompt caching
+```
+
+The spec is saved to `agent/specs/issue-3.<model>.md`, and the call's tokens and cost are logged to `agent/usage.db`.
+
+**Generate the cost report** from the usage log:
+
+```bash
+pnpm --filter @spec-pilot/agent cost   # writes docs/cost-report.md
+```
+
+**Use the GitHub MCP server** in Claude Code (or any MCP client). It exposes `list_issues`, `get_issue`, `add_comment`, `create_branch` and `create_pull_request`:
+
+```bash
+claude mcp add github -e GITHUB_TOKEN=<your-token> -- node <path-to>/spec-pilot/mcp-servers/github/src/index.ts
+```
+
+**Run the tests and type-check:**
+
+```bash
+pnpm test
+pnpm typecheck
+```
 
 ## Demo target
 
