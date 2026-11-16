@@ -2,3 +2,4 @@ packages:
   - "agent"
   - "mcp-servers/*"
   - "dashboard"
+  - "packages/*"
