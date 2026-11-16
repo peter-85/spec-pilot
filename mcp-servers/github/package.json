@@ -1,15 +1,12 @@
 {
-  "name": "github-mcp-server",
+  "name": "@spec-pilot/github-mcp-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "description": "MCP server exposing GitHub issue, comment, branch and pull request tools",
+  "private": true,
   "type": "module",
+  "scripts": {
+    "start": "node src/index.ts"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@spec-pilot/github": "workspace:*",
