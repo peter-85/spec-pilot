@@ -1,15 +1,15 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { getIssue, getRepoFile } from "../github.ts";
 import { createMessage } from "../llm/clients.ts";
+import { parseSpecArgs } from "./args.ts";
 import { toMarkdown } from "./markdown.ts";
 import { parseSpec, submitSpecTool } from "./schema.ts";
 
-const MODEL = process.argv[3] ?? "claude-sonnet-5-5";
-const CACHE = process.argv.includes("--cache");
-
-const issueNumber = Number(process.argv[2]);
-
-if (!issueNumber) throw new Error("Usage: pnpm spec <issue-number> [model]");
+const {
+  issueNumber,
+  model: MODEL,
+  cache: CACHE,
+} = parseSpecArgs(process.argv.slice(2));
 
 const [systemPrompt, issue, readme, claudeMd] = await Promise.all([
   readFile(new URL("../../prompts/spec-writer.md", import.meta.url), "utf8"),
