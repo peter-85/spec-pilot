@@ -1,0 +1,11 @@
+{
+  "name": "@spec-pilot/github",
+  "version": "1.0.0",
+  "description": "GitHub REST client: issues and repo files",
+  "private": true,
+  "type": "module",
+  "exports": "./github.ts",
+  "devDependencies": {
+    "@types/node": "^24.19.2"
+  }
+}

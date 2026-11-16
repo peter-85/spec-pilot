@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { getIssue, getRepoFile } from "../github.ts";
+import { getIssue, getRepoFile } from "@spec-pilot/github";
 import { createMessage } from "../llm/clients.ts";
 import { toMarkdown } from "./markdown.ts";
 import { parseSpec, submitSpecTool } from "./schema.ts";

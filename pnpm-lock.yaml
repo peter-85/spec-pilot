@@ -171,6 +171,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^1.7.0
         version: 1.7.0(zod@4.6.7)
+      '@spec-pilot/github':
+        specifier: workspace:*
+        version: link:../packages/github
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -184,6 +187,12 @@ importers:
       vitest:
         specifier: ^5.1.0
         version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2))
+
+  packages/github:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
 
 packages:
 

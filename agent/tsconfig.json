@@ -8,7 +8,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "outDir": "dist"
+    "noEmit": true // type-check only: Node runs the .ts files directly, including workspace packages
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]
