@@ -25,6 +25,8 @@ const RawIssue = z.object({
   html_url: z.string(),
   pull_request: z.unknown().optional(), // present when the "issue" is a PR
 });
+const HtmlUrl = z.object({ html_url: z.string() });
+const GitRef = z.object({ object: z.object({ sha: z.string() }) });
 
 export class GitHubError extends Error {
   readonly status: number;
@@ -123,4 +125,46 @@ export async function getRepoFile(
     if (err instanceof GitHubError && err.status === 404) return "";
     throw err;
   }
+}
+
+/** Comments on an issue or PR. Returns the comment's URL. */
+export async function addComment(
+  number: number,
+  body: string,
+  repo: Repo = DEFAULT_REPO,
+): Promise<string> {
+  const c = await githubJson(
+    HtmlUrl,
+    `${repoPath(repo)}/issues/${number}/comments`,
+    { method: "POST", body: { body } },
+  );
+  return c.html_url;
+}
+
+/** Creates `branch` pointing at the current tip of `from`. */
+export async function createBranch(
+  branch: string,
+  from = "main",
+  repo: Repo = DEFAULT_REPO,
+): Promise<void> {
+  const ref = await githubJson(
+    GitRef,
+    `${repoPath(repo)}/git/ref/heads/${from}`,
+  );
+  await github(`${repoPath(repo)}/git/refs`, {
+    method: "POST",
+    body: { ref: `refs/heads/${branch}`, sha: ref.object.sha },
+  });
+}
+
+/** Opens a PR from `head` into `base`. Returns the PR's URL. */
+export async function createPullRequest(
+  pr: { title: string; head: string; body: string; base?: string },
+  repo: Repo = DEFAULT_REPO,
+): Promise<string> {
+  const created = await githubJson(HtmlUrl, `${repoPath(repo)}/pulls`, {
+    method: "POST",
+    body: { base: "main", ...pr },
+  });
+  return created.html_url;
 }

@@ -1,7 +1,7 @@
 {
   "name": "@spec-pilot/github",
   "version": "1.0.0",
-  "description": "GitHub REST client: issues and repo files",
+  "description": "GitHub REST client: issues, repo files, comments, branches and PRs",
   "private": true,
   "type": "module",
   "exports": "./github.ts",

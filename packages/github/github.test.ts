@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getIssue, getRepoFile, GitHubError } from "./github.ts";
+import { createBranch, getIssue, getRepoFile, GitHubError } from "./github.ts";
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -36,6 +36,25 @@ describe("getRepoFile", () => {
   it("throws on other errors", async () => {
     fetchMock.mockResolvedValue(new Response("Forbidden", { status: 403 }));
     await expect(getRepoFile("README.md")).rejects.toBeInstanceOf(GitHubError);
+  });
+});
+
+describe("createBranch", () => {
+  // Reads the sha of the source branch, then creates the new ref at it
+  it("creates the branch at the tip of the source branch", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({ object: { sha: "abc123" } }))
+      .mockResolvedValueOnce(json({}, 201));
+
+    await createBranch("feat/x", "main", { owner: "o", repo: "r" });
+
+    const [url, init] = fetchMock.mock.calls[1]!;
+    expect(url).toBe("https://api.github.com/repos/o/r/git/refs");
+    expect(init!.method).toBe("POST");
+    expect(JSON.parse(init!.body as string)).toEqual({
+      ref: "refs/heads/feat/x",
+      sha: "abc123",
+    });
   });
 });
 
