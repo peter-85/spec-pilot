@@ -6,6 +6,7 @@
     "types": ["node"],
     "rewriteRelativeImportExtensions": true,
     "strict": true,
+    "erasableSyntaxOnly": true, // Node only strips types; reject syntax it cannot run
     "skipLibCheck": true,
     "noEmit": true // type-check only: Node runs the .ts files directly
   },
