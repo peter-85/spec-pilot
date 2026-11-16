@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "spec": "node --env-file=.env src/spec/writer.ts",
-    "cost": "node src/cost-report.ts"
+    "cost": "node src/cost-report.ts",
+    "typecheck": "tsc -p ."
   },
   "keywords": [],
   "author": "",
