@@ -42,6 +42,7 @@ Issues leave decisions open, and agents fill gaps with guesses. Writing a spec f
 spec-pilot/
 ├── agent/          # Orchestration: spec writer, planner, implementer, reviewer (Claude Agent SDK)
 ├── mcp-servers/    # Reusable MCP servers (GitHub; Jira planned)
+├── packages/       # Shared libraries, e.g. the GitHub REST client
 ├── skills/         # Claude Code skills: write-spec, implement-from-spec, review-against-spec
 ├── dashboard/      # React + TypeScript dashboard for runs, specs, and costs
 └── docs/           # Model comparisons, lessons learned, context engineering results

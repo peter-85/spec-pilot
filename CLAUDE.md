@@ -10,6 +10,7 @@ SpecPilot turns GitHub issues into reviewed pull requests: issue → spec → pl
 
 - `agent/` — orchestration (spec writer, planner, implementer, reviewer) using the Claude Agent SDK
 - `mcp-servers/github/` — MCP server exposing GitHub issue and PR tools
+- `packages/github/` — shared GitHub REST client (`@spec-pilot/github`), used by the agent and the MCP server
 - `skills/` — Claude Code skills used by the agents
 - `dashboard/` — React + TypeScript (Vite) dashboard
 - `docs/` — write-ups: model comparison, lessons learned, context engineering, cost routing
