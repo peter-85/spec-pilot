@@ -101,21 +101,13 @@ The spec is saved to `agent/specs/issue-3.<model>.md`, and the call's tokens and
 pnpm --filter @spec-pilot/agent cost   # writes docs/cost-report.md
 ```
 
-**Install the Claude Code plugin.** It bundles the skills (`write-spec`, `revise-spec`, `implement-from-spec`), the `spec-reviewer` subagent and the GitHub MCP server. The server reads `GITHUB_TOKEN` from your environment, so export it before starting Claude Code:
-
-```bash
-export GITHUB_TOKEN=<your-token>
-claude plugin marketplace add peter-85/spec-pilot
-claude plugin install specpilot@specpilot
-```
-
 **Or use only the GitHub MCP server** in Claude Code or any MCP client. It exposes `list_issues`, `get_issue`, `add_comment`, `create_branch` and `create_pull_request`:
 
 ```bash
 claude mcp add github -e GITHUB_TOKEN=<your-token> -- node <path-to>/spec-pilot/mcp-servers/github/dist/server.mjs
 ```
 
-`dist/server.mjs` is a single-file bundle, committed so the plugin works without installing dependencies. After changing the server, rebuild it with `pnpm --filter @spec-pilot/github-mcp-server build`.
+For the full workflow in Claude Code, install the plugin instead (see [Claude Code plugin](#claude-code-plugin)).
 
 **Run the tests and type-check:**
 
@@ -123,6 +115,101 @@ claude mcp add github -e GITHUB_TOKEN=<your-token> -- node <path-to>/spec-pilot/
 pnpm test
 pnpm typecheck
 ```
+
+## Claude Code plugin
+
+SpecPilot is also a [Claude Code](https://code.claude.com) plugin. One install gives you the spec-driven skills (`write-spec`, `revise-spec`, `implement-from-spec`), the `spec-reviewer` subagent, and the GitHub MCP server, in every project you open.
+
+### 1. Create a GitHub token
+
+Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens), limited to the repositories SpecPilot should work on and with an expiration date:
+
+| Permission    | Access               | Used for                         |
+| ------------- | -------------------- | -------------------------------- |
+| Metadata      | Read-only (required) | Repository info                  |
+| Issues        | Read and write       | Reading issues, posting comments |
+| Contents      | Read and write       | Creating branches                |
+| Pull requests | Read and write       | Opening pull requests            |
+
+### 2. Set `GITHUB_TOKEN` in your environment
+
+The plugin's MCP server reads the token from the environment; there is no `.env` file in an installed plugin.
+
+**Windows** (Command Prompt or PowerShell):
+
+```cmd
+setx GITHUB_TOKEN "github_pat_..."
+```
+
+**macOS / Linux**: add to your shell profile (e.g. `~/.zshrc` or `~/.bashrc`):
+
+```bash
+export GITHUB_TOKEN="github_pat_..."
+```
+
+Then **open a new terminal**. Terminals and apps (like VS Code) that were already open don't see the new variable until they restart.
+
+### 3. Install
+
+From a terminal:
+
+```bash
+claude plugin marketplace add peter-85/spec-pilot
+claude plugin install specpilot@specpilot
+```
+
+Or inside an interactive Claude Code session (`claude`):
+
+```
+/plugin marketplace add peter-85/spec-pilot
+/plugin install specpilot@specpilot
+```
+
+When asked for a scope, choose **user scope** to use SpecPilot in every project. Project scope records it in the repo's `.claude/settings.json`, so everyone who clones that repo gets it, which is useful when a team adopts SpecPilot.
+
+> **VS Code extension:** `/plugin` isn't available in the extension. Run the commands above in VS Code's integrated terminal, then restart VS Code completely. The extension shares the same settings, so it loads the plugin, and the restart lets it see `GITHUB_TOKEN`.
+
+### 4. Check it works
+
+- `/mcp` shows `plugin:specpilot:github-specpilot` as **Connected**.
+- Typing `/specpilot:` lists the three skills.
+
+If the server isn't connected, `GITHUB_TOKEN` is usually missing from the environment Claude Code was started in: check with `echo %GITHUB_TOKEN%` (cmd), `echo $env:GITHUB_TOKEN` (PowerShell) or `echo $GITHUB_TOKEN` (bash), and restart from a new terminal.
+
+### Usage
+
+Run these in the project you want to work on, not in the SpecPilot repo. Plugin commands carry the `specpilot:` prefix, so they never clash with other skills.
+
+| Step      | Command                                                                     | What it does                                                                                                                                                     |
+| --------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Spec   | `/specpilot:write-spec 12`                                                  | Reads issue #12 and the code it touches, then writes `specs/issue-12.md`. Every open question has a proposed answer and a blocking flag.                         |
+| 2. Decide | `/specpilot:revise-spec 12 Q1: full timestamp. Q2: accept proposed.`        | Applies your answers, records them under Decisions, and sets `Status: approved` when no blocking questions remain.                                               |
+| 3. Build  | `/specpilot:implement-from-spec 12`                                         | Refuses draft specs. Shows a plan and waits for approval, then implements on branch `specpilot/issue-12`, adds tests, runs the suite, and commits. Never pushes. |
+| 4. Review | _"Use the spec-reviewer subagent to review this branch against issue #12."_ | A read-only reviewer with a fresh context checks the branch against the spec's acceptance criteria, decisions, and scope.                                        |
+| 5. PR     | _"Open a pull request for this branch with the github-specpilot server."_   | After you push the branch, opens the PR with `Closes #12`.                                                                                                       |
+
+Asking in plain words ("write a spec for issue #12") also works; only `implement-from-spec` must be started explicitly.
+
+### Plugin layout
+
+```
+spec-pilot/
+├── .claude-plugin/
+│   ├── plugin.json          # name and version
+│   └── marketplace.json     # makes this repo installable as a plugin source
+├── .mcp.json                # starts mcp-servers/github/dist/server.mjs with GITHUB_TOKEN
+├── skills/                  # write-spec, revise-spec, implement-from-spec
+└── agents/                  # spec-reviewer
+```
+
+`dist/server.mjs` is a single-file bundle (esbuild), committed because an installed plugin doesn't include `node_modules`.
+
+### Releasing a change
+
+1. If the MCP server or `packages/github` changed, rebuild: `pnpm --filter @spec-pilot/github-mcp-server build`, and commit `dist/server.mjs`.
+2. Increase `version` in `.claude-plugin/plugin.json`.
+3. Commit and push.
+4. In Claude Code, update the plugin from `/plugin`, then restart.
 
 ## Demo target
 
