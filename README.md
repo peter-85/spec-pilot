@@ -57,7 +57,7 @@ spec-pilot/
 - [x] **Phase 0** — Repo setup, README, CLAUDE.md, demo target repo
 - [x] **Phase 1** — Spec writer via LLM APIs + cost logging + model comparison
 - [x] **Phase 2** — GitHub MCP server
-- [ ] **Phase 3** — Claude Code skills, hooks, subagents; spec-driven workflow
+- [x] **Phase 3** — Claude Code skills, hooks, subagents; spec-driven workflow
 - [ ] **Phase 4** — Autonomous agent triggered by issue labels; AI review in CI; guardrails
 - [ ] **Phase 5** — Context engineering with RAG (pgvector) + before/after results
 - [ ] **Phase 6** — AWS deployment + routing simple tasks to a local open-weight model
