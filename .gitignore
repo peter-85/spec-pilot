@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+!mcp-servers/github/dist/
 
 # Test coverage
 coverage/

@@ -3,3 +3,5 @@ packages:
   - "mcp-servers/*"
   - "dashboard"
   - "packages/*"
+allowBuilds:
+  esbuild: false
