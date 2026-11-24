@@ -1,0 +1,6 @@
+{
+  "name": "specpilot",
+  "version": "0.1.0",
+  "description": "Spec-driven development: issue → spec → implementation → review, with a GitHub MCP server.",
+  "author": { "name": "Petar Georgiev" }
+}

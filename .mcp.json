@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "github-specpilot": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/github/dist/server.mjs"],
+      "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}" }
+    }
+  }
+}

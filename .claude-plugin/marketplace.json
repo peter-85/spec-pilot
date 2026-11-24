@@ -1,0 +1,11 @@
+{
+  "name": "specpilot",
+  "owner": { "name": "Petar Georgiev" },
+  "plugins": [
+    {
+      "name": "specpilot",
+      "source": "./",
+      "description": "Spec-driven development skills, a spec reviewer subagent, and a GitHub MCP server."
+    }
+  ]
+}
