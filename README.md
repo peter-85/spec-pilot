@@ -45,6 +45,7 @@ spec-pilot/
 ├── packages/       # Shared libraries, e.g. the GitHub REST client
 ├── skills/         # Claude Code skills: write-spec, revise-spec, implement-from-spec
 ├── agents/         # Claude Code subagents: spec-reviewer
+├── .claude-plugin/ # Packages skills, subagents and the MCP server as a Claude Code plugin
 ├── dashboard/      # React + TypeScript dashboard for runs, specs, and costs
 └── docs/           # Model comparisons, lessons learned, context engineering results
 ```
@@ -78,7 +79,7 @@ _Coming later:_ impact of retrieval on spec quality, and cost savings from model
 
 ## Getting started
 
-**Requirements:** Node.js 24+ (runs TypeScript directly, no build step) and pnpm.
+**Requirements:** Node.js 24+ (runs TypeScript directly; the only build step bundles the MCP server) and pnpm.
 
 ```bash
 pnpm install
@@ -100,11 +101,21 @@ The spec is saved to `agent/specs/issue-3.<model>.md`, and the call's tokens and
 pnpm --filter @spec-pilot/agent cost   # writes docs/cost-report.md
 ```
 
-**Use the GitHub MCP server** in Claude Code (or any MCP client). It exposes `list_issues`, `get_issue`, `add_comment`, `create_branch` and `create_pull_request`:
+**Install the Claude Code plugin.** It bundles the skills (`write-spec`, `revise-spec`, `implement-from-spec`), the `spec-reviewer` subagent and the GitHub MCP server. The server reads `GITHUB_TOKEN` from your environment, so export it before starting Claude Code:
 
 ```bash
-claude mcp add github -e GITHUB_TOKEN=<your-token> -- node <path-to>/spec-pilot/mcp-servers/github/src/index.ts
+export GITHUB_TOKEN=<your-token>
+claude plugin marketplace add peter-85/spec-pilot
+claude plugin install specpilot@specpilot
 ```
+
+**Or use only the GitHub MCP server** in Claude Code or any MCP client. It exposes `list_issues`, `get_issue`, `add_comment`, `create_branch` and `create_pull_request`:
+
+```bash
+claude mcp add github -e GITHUB_TOKEN=<your-token> -- node <path-to>/spec-pilot/mcp-servers/github/dist/server.mjs
+```
+
+`dist/server.mjs` is a single-file bundle, committed so the plugin works without installing dependencies. After changing the server, rebuild it with `pnpm --filter @spec-pilot/github-mcp-server build`.
 
 **Run the tests and type-check:**
 

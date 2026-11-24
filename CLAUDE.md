@@ -9,18 +9,19 @@ SpecPilot turns GitHub issues into reviewed pull requests: issue → spec → pl
 ## Repository layout
 
 - `agent/` — orchestration (spec writer, planner, implementer, reviewer) using the Claude Agent SDK
-- `mcp-servers/github/` — MCP server exposing GitHub issue and PR tools
+- `mcp-servers/github/` — MCP server exposing GitHub issue and PR tools; `dist/server.mjs` is its committed bundle
 - `packages/github/` — shared GitHub REST client (`@spec-pilot/github`), used by the agent and the MCP server
 - `skills/` — Claude Code skills used by the agents
 - `agents/` — Claude Code subagents (`spec-reviewer` checks a branch against its spec)
 - `dashboard/` — React + TypeScript (Vite) dashboard
 - `docs/` — write-ups: model comparison, lessons learned, context engineering, cost routing
+- `.claude-plugin/`, `.mcp.json` — packages the skills, subagents and MCP server as the `specpilot` Claude Code plugin
 
 ## Tech and conventions
 
 - TypeScript everywhere, `strict` mode on. No `any` unless commented with a reason.
 - Node.js 24+, pnpm workspaces.
-- No build step: Node runs the `.ts` files directly by stripping types. So:
+- No build step in development: Node runs the `.ts` files directly by stripping types. So:
   - relative imports end in `.ts` (`import { x } from "./x.ts"`);
   - only erasable syntax — no enums, namespaces or constructor parameter properties (`erasableSyntaxOnly` enforces this);
   - workspace packages export their `.ts` source (`"exports": "./github.ts"`).
@@ -42,9 +43,12 @@ pnpm typecheck        # tsc in every package
 pnpm --filter @spec-pilot/agent spec <issue> [model] [--cache]   # write a spec to agent/specs/
 pnpm --filter @spec-pilot/agent cost                             # regenerate docs/cost-report.md
 pnpm --filter @spec-pilot/github-mcp-server start                # run the GitHub MCP server (stdio)
+pnpm --filter @spec-pilot/github-mcp-server build                # bundle it to mcp-servers/github/dist/server.mjs
 ```
 
-There is no build or lint step yet.
+The only build is the MCP server bundle, which the plugin runs (an installed plugin has no `node_modules`). Whenever you change `mcp-servers/github/src/` or `packages/github/`, run the build and commit the updated `dist/server.mjs`. There is no lint step yet.
+
+To try the server in the MCP Inspector, put it with its `GITHUB_TOKEN` in a local `inspector.config.json` (gitignored, never commit it) and run `pnpm dlx @modelcontextprotocol/inspector --config inspector.config.json --server github`. Use `pnpm dlx`, not `npx`: npm refuses to run in this repo because `devEngines` requires pnpm.
 
 ## Spec format
 
